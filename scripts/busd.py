@@ -5,7 +5,6 @@ import json
 from web3 import Web3
 import requests
 
-COIN_API_KEY = "ec455fb4-aab6-44bf-88af-279555e4aaa9"
 CRYPTO_COMPARE_API_KEY = "42d127eac62b0177671afb0df449ed4cf7db75d5f9407af0e7d4724e86d1ee60"
 
 busd_address = "0x4aA51fa0dE0e94e801D7E78f94E15c5D15133454"
