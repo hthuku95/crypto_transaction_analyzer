@@ -15,7 +15,16 @@ erc20_address_two = "0x4F196FdEdC51C7F0c9E33D1D9030d8EC5C5A238C"
 erc20_address_three = "0x36928500bc1dcd7af6a2b4008875cc336b927d57"
 ETHERSCAN_API_KEY = env_vars.get('ETHERSCAN_API_KEY')
 
+# Cache for storing fetched transactions
+transaction_cache = {}
+
+# Cache for storing USD conversion values
+usd_cache = {}
+
 def fetch_erc20_transactions(address, api_key):
+    # Check if transactions are already cached
+    if address in transaction_cache:
+        return transaction_cache[address]
     # Ethereum configuration
     etherscan_api_url = 'https://api.etherscan.io/api'
 
@@ -33,6 +42,8 @@ def fetch_erc20_transactions(address, api_key):
             data = response.json()
             if data['status'] == '1':
                 transactions = data['result']
+                # Cache the fetched transactions
+                transaction_cache[address] = transactions
                 return transactions
             else:
                 print(f"Etherscan API returned an error: {data['message']}")
@@ -73,6 +84,9 @@ def calculate_erc20_volumes(transactions, target_address):
 
 
 def convert_to_usd(value, timestamp):
+    # Check if conversion value is already cached
+    if timestamp in usd_cache:
+        return usd_cache[timestamp]
     api_url = f"https://min-api.cryptocompare.com/data/pricehistorical?fsym=ETH&tsyms=USD&ts={timestamp}&api_key=CRYPTO_COMPARE_API_KEY"
 
     try:
@@ -80,6 +94,8 @@ def convert_to_usd(value, timestamp):
         data = response.json()
         usd_price = data['ETH']['USD']
         usd_value = value * usd_price
+        # Cache the USD conversion value
+        usd_cache[timestamp] = usd_value
         return usd_value
     except requests.RequestException as e:
         print("Error occurred while converting to USD:", str(e))
