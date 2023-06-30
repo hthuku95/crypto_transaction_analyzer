@@ -13,7 +13,16 @@ CRYPTO_COMPARE_API_KEY = env_vars.get('CRYPTO_COMPARE_API_KEY')
 busd_address = "0x4aA51fa0dE0e94e801D7E78f94E15c5D15133454"
 BSCSCAN_API_KEY = env_vars.get('BSCSAN_API_KEY')
 
+# Cache for storing fetched transactions
+transaction_cache = {}
+
+# Cache for storing USD conversion values
+usd_cache = {}
+
 def fetch_busd_transactions(address, api_key):
+    # Check if transactions are already cached
+    if address in transaction_cache:
+        return transaction_cache[address]
     # BscScan API configuration
     bscscan_api_url = 'https://api.bscscan.com/api'
 
@@ -32,6 +41,8 @@ def fetch_busd_transactions(address, api_key):
             data = response.json()
             if data['status'] == '1':
                 transactions = data['result']
+                # Cache the fetched transactions
+                transaction_cache[address] = transactions
                 return transactions
             else:
                 print(f"BscScan API returned an error: {data['message']}")
@@ -70,6 +81,9 @@ def calculate_busd_volumes(transactions, target_address):
     return incoming_volume_usd, outgoing_volume_usd
 
 def convert_to_usd(amount, timestamp):
+    # Check if conversion value is already cached
+    if timestamp in usd_cache:
+        return usd_cache[timestamp]
     url = f"https://min-api.cryptocompare.com/data/pricehistorical?fsym=BUSD&tsyms=USD&ts={timestamp}&api_key={CRYPTO_COMPARE_API_KEY}"
     
     try:
@@ -82,6 +96,8 @@ def convert_to_usd(amount, timestamp):
             
             if usd_price is not None:
                 usd_value = amount * usd_price
+                # Cache the USD conversion value
+                usd_cache[timestamp] = usd_value
                 return usd_value
         
         print(f"Error occurred while converting to USD: {data.get('Message', 'Unknown error')}")
