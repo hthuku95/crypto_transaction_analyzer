@@ -14,7 +14,16 @@ btc_address_one = "Bc1qzh8rga4vvvzzdan5jqhz5ljygt0hvdp7j74qzn1GrwDkr33gT6"
 btc_address_two = "1GrwDkr33gT6LuumniYjKEGjTLhsL5kmqC"
 BITCOIN_EXPLORER_API_KEY = env_vars.get('BITCOIN_EXPLORER_API_KEY')
 
+# Cache for storing fetched transactions
+transaction_cache = {}
+
+# Cache for storing USD conversion values
+usd_cache = {}
+
 def fetch_bitcoin_transactions(address, api_key):
+    # Check if transactions are already cached
+    if address in transaction_cache:
+        return transaction_cache[address]
     # Blockcypher API configuration
     blockcypher_api_url = f"https://api.blockcypher.com/v1/btc/main/addrs/{address}/full"
     headers = {'Content-Type': 'application/json'}
@@ -25,6 +34,8 @@ def fetch_bitcoin_transactions(address, api_key):
         if response.status_code == 200:
             data = response.json()
             transactions = data.get('txs', [])
+            # Cache the fetched transactions
+            transaction_cache[address] = transactions
             return transactions
         else:
             print(f"Error fetching Bitcoin transactions for address {address}. Status code: {response.status_code}")
@@ -89,6 +100,9 @@ def calculate_bitcoin_volumes(transactions):
     return incoming_volume_usd, outgoing_volume_usd
 
 def convert_to_usd(amount, timestamp):
+    # Check if conversion value is already cached
+    if timestamp in usd_cache:
+        return usd_cache[timestamp]
     url = f"https://min-api.cryptocompare.com/data/pricehistorical?fsym=BTC&tsyms=USD&ts={timestamp}&api_key={CRYPTO_COMPARE_API_KEY}"
     
     try:
@@ -101,6 +115,8 @@ def convert_to_usd(amount, timestamp):
             
             if usd_price is not None:
                 usd_value = amount * usd_price
+                # Cache the USD conversion value
+                usd_cache[timestamp] = usd_value
                 return usd_value
         
         print(f"Error occurred while converting to USD: {data.get('Message', 'Unknown error')}")
