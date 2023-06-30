@@ -14,7 +14,16 @@ CRYPTO_COMPARE_API_KEY = env_vars.get('CRYPTO_COMPARE_API_KEY')
 bnb_address = "0x3F10a43438cdF6B0E9Ef39dcA5F9438dd3326227"
 BSCSCAN_API_KEY = env_vars.get('BSCSAN_API_KEY')
 
+# Cache for storing fetched transactions
+transaction_cache = {}
+
+# Cache for storing USD conversion values
+usd_cache = {}
+
 def fetch_bnb_transactions(address, api_key):
+    # Check if transactions are already cached
+    if address in transaction_cache:
+        return transaction_cache[address]
     # BscScan API configuration
     bscscan_api_url = 'https://api.bscscan.com/api'
 
@@ -32,6 +41,8 @@ def fetch_bnb_transactions(address, api_key):
             data = response.json()
             if data['status'] == '1':
                 transactions = data['result']
+                # Cache the fetched transactions
+                transaction_cache[address] = transactions
                 return transactions
             else:
                 print(f"BscScan API returned an error: {data['message']}")
@@ -72,6 +83,9 @@ def calculate_bnb_volumes(transactions, target_address):
 
 
 def convert_to_usd(value, timestamp):
+    # Check if conversion value is already cached
+    if timestamp in usd_cache:
+        return usd_cache[timestamp]
     api_url = f"https://min-api.cryptocompare.com/data/pricehistorical?fsym=BNB&tsyms=USD&ts={timestamp}&api_key=CRYPTO_COMPARE_API_KEY"
     
     try:
@@ -79,6 +93,8 @@ def convert_to_usd(value, timestamp):
         data = response.json()
         usd_price = data['BNB']['USD']
         usd_value = value * usd_price
+        # Cache the USD conversion value
+        usd_cache[timestamp] = usd_value
         return usd_value
     except requests.RequestException as e:
         print("Error occurred while converting to USD:", str(e))
