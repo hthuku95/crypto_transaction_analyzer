@@ -5,7 +5,7 @@ import json
 from web3 import Web3
 import requests
 from dotenv import dotenv_values
-
+import csv
 env_vars = dotenv_values('.env')
 
 CRYPTO_COMPARE_API_KEY = env_vars.get('CRYPTO_COMPARE_API_KEY')
@@ -53,45 +53,18 @@ def fetch_busd_transactions(address, api_key):
 
     return []
 
-def calculate_busd_volumes(transactions, target_address):
-    incoming_volume_usd = 0
-    outgoing_volume_usd = 0
-
-    # Calculate the timestamp 60 days ago
-    cutoff_date = int((datetime.now() - timedelta(days=60)).timestamp())
-
-    for tx in transactions:
-        value = int(tx['value']) / 10**18  # Convert value from wei to BUSD
-        timestamp = int(tx['timeStamp'])
-        address_from = tx['from']
-        address_to = tx['to']
-        print("value",value)
-        print("timestamp",timestamp)
-        print("cutoff date",cutoff_date)
-        if timestamp >= cutoff_date:
-            usd_value = convert_to_usd(value, timestamp)
-            if usd_value is not None:
-                if address_to.lower() == target_address.lower():  # Incoming transaction
-                    incoming_volume_usd += usd_value
-                    print("Incoming transaction to:", address_to)
-                elif address_from.lower() == target_address.lower():  # Outgoing transaction
-                    outgoing_volume_usd += usd_value
-                    print("Outgoing transaction from:", address_from)
-
-    return incoming_volume_usd, outgoing_volume_usd
-
 def convert_to_usd(amount, timestamp):
     # Check if conversion value is already cached
     if timestamp in usd_cache:
         return usd_cache[timestamp]
-    url = f"https://min-api.cryptocompare.com/data/pricehistorical?fsym=BUSD&tsyms=USD&ts={timestamp}&api_key={CRYPTO_COMPARE_API_KEY}"
+    url = f"https://min-api.cryptocompare.com/data/pricehistorical?fsym=BNB&tsyms=USD&ts={timestamp}&api_key={CRYPTO_COMPARE_API_KEY}"
     
     try:
         response = requests.get(url)
         data = response.json()
         
         if response.status_code == 200:
-            price_data = data.get('BUSD', {})
+            price_data = data.get('BNB', {})
             usd_price = price_data.get('USD')
             
             if usd_price is not None:
@@ -107,10 +80,57 @@ def convert_to_usd(amount, timestamp):
     
     return None
 
+def calculate_busd_volumes(transactions, target_address):
+    incoming_transactions = []
+    outgoing_transactions = []
+
+    # Calculate the timestamp 60 days ago
+    cutoff_date = int((datetime.now() - timedelta(days=60)).timestamp())
+
+    for tx in transactions:
+        value_wei = int(tx['value'])
+        value_bnb = value_wei / 10**18  # Convert value from wei to BNB
+        timestamp = int(tx['timeStamp'])
+        address_from = tx['from']
+        address_to = tx['to']
+
+        if timestamp >= cutoff_date:
+            usd_value = convert_to_usd(value_busd, timestamp)
+            if usd_value is not None:
+                if address_to.lower() == target_address.lower():  # Incoming transaction
+                    incoming_transactions.append({
+                        'asset_type': 'BUSD',
+                        'transaction_hash': tx['hash'],
+                        'timestamp': datetime.fromtimestamp(timestamp).strftime('%d/%m/%Y'),
+                        'value_bnb': value_bnb,
+                        'value_usd': usd_value
+                    })
+                elif address_from.lower() == target_address.lower():  # Outgoing transaction
+                    outgoing_transactions.append({
+                        'asset_type': 'BUSD',
+                        'transaction_hash': tx['hash'],
+                        'timestamp': datetime.fromtimestamp(timestamp).strftime('%d/%m/%Y'),
+                        'value_bnb': value_bnb,
+                        'value_usd': usd_value
+                    })
+
+    return incoming_transactions, outgoing_transactions
 
 
-busd_transactions = fetch_busd_transactions(busd_address,BSCSCAN_API_KEY)
+def export_transaction_data_to_csv(transactions, filename):
+    fieldnames = ['asset_type', 'transaction_hash', 'timestamp', 'value_bnb', 'value_usd']
 
-(a,b) = calculate_busd_volumes(busd_transactions,busd_address)
-print("Incoming",a)
-print("Outgoing",b)
+    with open(filename, 'w', newline='') as file:
+        writer = csv.DictWriter(file, fieldnames=fieldnames)
+        writer.writeheader()
+
+        for transaction in transactions:
+            writer.writerow(transaction)
+
+    print(f"Transaction data exported to {filename}")
+
+busd_transactions = fetch_busd_transactions(busd_address, BSCSCAN_API_KEY)
+incoming_transactions, outgoing_transactions = calculate_busd_volumes(busd_transactions, busd_address)
+
+export_transaction_data_to_csv(incoming_transactions, 'busd_incoming_transactions.csv')
+export_transaction_data_to_csv(outgoing_transactions, 'busd_outgoing_transactions.csv')
