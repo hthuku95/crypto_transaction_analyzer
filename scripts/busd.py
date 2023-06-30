@@ -6,6 +6,8 @@ from web3 import Web3
 import requests
 from dotenv import dotenv_values
 import csv
+import matplotlib.pyplot as plt
+
 env_vars = dotenv_values('.env')
 
 CRYPTO_COMPARE_API_KEY = env_vars.get('CRYPTO_COMPARE_API_KEY')
@@ -126,8 +128,42 @@ def export_transaction_data_to_csv(transactions, filename):
 
         for transaction in transactions:
             writer.writerow(transaction)
+        
+        # Generate charts
+        generate_charts(transactions, filename)
 
     print(f"Transaction data exported to {filename}")
+
+def generate_charts(transactions, filename):
+    timestamps = [transaction['timestamp'] for transaction in transactions]
+    values_bnb = [transaction['value_bnb'] for transaction in transactions]
+    values_usd = [transaction['value_usd'] for transaction in transactions]
+
+    # Generate BNB value chart
+    plt.figure(figsize=(12, 6))
+    plt.plot(timestamps, values_bnb, marker='o', linestyle='-', label='BNB Value')
+    plt.xlabel('Timestamp')
+    plt.ylabel('BNB Value')
+    plt.title('BUSD Transactions - BNB Value')
+    plt.legend()
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    plt.savefig(f'{filename}_bnb_chart.png')
+    plt.close()
+
+    # Generate USD value chart
+    plt.figure(figsize=(12, 6))
+    plt.plot(timestamps, values_usd, marker='o', linestyle='-', label='USD Value')
+    plt.xlabel('Timestamp')
+    plt.ylabel('USD Value')
+    plt.title('BUSD Transactions - USD Value')
+    plt.legend()
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    plt.savefig(f'{filename}_usd_chart.png')
+    plt.close()
+
+    print("Charts generated.")
 
 busd_transactions = fetch_busd_transactions(busd_address, BSCSCAN_API_KEY)
 incoming_transactions, outgoing_transactions = calculate_busd_volumes(busd_transactions, busd_address)
