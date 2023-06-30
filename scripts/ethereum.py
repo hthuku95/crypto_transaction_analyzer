@@ -5,6 +5,7 @@ import json
 from web3 import Web3
 import requests
 from dotenv import dotenv_values
+import csv
 
 env_vars = dotenv_values('.env')
 
@@ -53,33 +54,39 @@ def fetch_ethereum_transactions(address, api_key):
 
     return []
 
-
 def calculate_eth_volumes(transactions, target_address):
-    incoming_volume_usd = 0
-    outgoing_volume_usd = 0
+    incoming_transactions = []
+    outgoing_transactions = []
 
     # Calculate the timestamp 60 days ago
     cutoff_date = int((datetime.now() - timedelta(days=60)).timestamp())
 
     for tx in transactions:
-        value = int(tx['value']) / 10**18  # Convert value from wei to BUSD
+        value = int(tx['value']) / 10**18  # Convert value from wei to ETH
         timestamp = int(tx['timeStamp'])
         address_from = tx['from']
         address_to = tx['to']
-        print("value",value)
-        print("timestamp",timestamp)
-        print("cutoff date",cutoff_date)
+
         if timestamp >= cutoff_date:
             usd_value = convert_to_usd(value, timestamp)
             if usd_value is not None:
                 if address_to.lower() == target_address.lower():  # Incoming transaction
-                    incoming_volume_usd += usd_value
-                    print("Incoming transaction to:", address_to)
+                    incoming_transactions.append({
+                        'asset_type': 'Ethereum',
+                        'transaction_hash': tx['hash'],
+                        'timestamp': datetime.fromtimestamp(timestamp).strftime('%d/%m/%Y'),
+                        'value_usd': usd_value
+                    })
                 elif address_from.lower() == target_address.lower():  # Outgoing transaction
-                    outgoing_volume_usd += usd_value
-                    print("Outgoing transaction from:", address_from)
+                    outgoing_transactions.append({
+                        'asset_type': 'Ethereum',
+                        'transaction_hash': tx['hash'],
+                        'timestamp': datetime.fromtimestamp(timestamp).strftime('%d/%m/%Y'),
+                        'value_usd': usd_value
+                    })
 
-    return incoming_volume_usd, outgoing_volume_usd
+    return incoming_transactions, outgoing_transactions
+
 
 def convert_to_usd(value, timestamp):
     # Check if conversion value is already cached
@@ -99,7 +106,23 @@ def convert_to_usd(value, timestamp):
         print("Error occurred while converting to USD:", str(e))
         return None
 
-ethereum_transactions =  fetch_ethereum_transactions(ethereum_address,ETHERSCAN_API_KEY)
-(a,b) = calculate_eth_volumes(ethereum_transactions,ethereum_address)
-print("Incoming",a)
-print("Outgoing",b)
+def export_transaction_data_to_csv(incoming_transactions, outgoing_transactions):
+    filename = 'ethereum_transactions.csv'
+
+    fieldnames = ['asset_type', 'transaction_hash', 'timestamp', 'value_usd']
+
+    with open(filename, 'w', newline='') as file:
+        writer = csv.DictWriter(file, fieldnames=fieldnames)
+        writer.writeheader()
+
+        for transaction in incoming_transactions:
+            writer.writerow(transaction)
+
+        for transaction in outgoing_transactions:
+            writer.writerow(transaction)
+
+    print(f"Transaction data exported to {filename}")
+
+ethereum_transactions = fetch_ethereum_transactions(ethereum_address, ETHERSCAN_API_KEY)
+incoming_transactions, outgoing_transactions = calculate_eth_volumes(ethereum_transactions, ethereum_address)
+export_transaction_data_to_csv(incoming_transactions, outgoing_transactions)
