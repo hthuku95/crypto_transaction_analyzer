@@ -6,6 +6,8 @@ from web3 import Web3
 import requests
 from dotenv import dotenv_values
 import csv
+import matplotlib.pyplot as plt
+
 env_vars = dotenv_values('.env')
 
 
@@ -75,6 +77,43 @@ def export_transaction_data_to_csv(incoming_transactions, outgoing_transactions)
                 'timestamp': transaction['timestamp'],
                 'value_usd': transaction['value_usd']
             })
+        
+        generate_charts(incoming_transactions, outgoing_transactions)
+    print("Transaction data exported to CSV file.")
+
+def generate_charts(incoming_transactions, outgoing_transactions):
+    timestamps_incoming = [transaction['timestamp'] for transaction in incoming_transactions]
+    values_usd_incoming = [transaction['value_usd'] for transaction in incoming_transactions]
+
+    timestamps_outgoing = [transaction['timestamp'] for transaction in outgoing_transactions]
+    values_usd_outgoing = [transaction['value_usd'] for transaction in outgoing_transactions]
+
+    # Generate Incoming USD value chart
+    plt.figure(figsize=(12, 6))
+    plt.plot(timestamps_incoming, values_usd_incoming, marker='o', linestyle='-', label='Incoming USD Value')
+    plt.xlabel('Timestamp')
+    plt.ylabel('USD Value')
+    plt.title('BNB Transactions - Incoming USD Value')
+    plt.legend()
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    plt.savefig('bnb_incoming_usd_chart.png')
+    plt.close()
+
+    # Generate Outgoing USD value chart
+    plt.figure(figsize=(12, 6))
+    plt.plot(timestamps_outgoing, values_usd_outgoing, marker='o', linestyle='-', label='Outgoing USD Value')
+    plt.xlabel('Timestamp')
+    plt.ylabel('USD Value')
+    plt.title('BNB Transactions - Outgoing USD Value')
+    plt.legend()
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    plt.savefig('bnb_outgoing_usd_chart.png')
+    plt.close()
+
+    print("Charts generated.")
+
 
 def calculate_bnb_volumes(transactions, target_address):
     incoming_transactions = []
