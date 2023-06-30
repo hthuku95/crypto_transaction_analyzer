@@ -43,76 +43,60 @@ def fetch_erc20_transactions(address, api_key):
 
     return []
 
-def calculate_erc20_volumes(transactions):
-    incoming_volume_usd = 0
-    outgoing_volume_usd = 0
+def calculate_erc20_volumes(transactions, target_address):
+    incoming_volume_eth = 0
+    outgoing_volume_eth = 0
 
     # Calculate the timestamp 60 days ago
     cutoff_date = int((datetime.now() - timedelta(days=60)).timestamp())
 
     for tx in transactions:
-        value = int(tx['value']) / 10**18  # Convert value from wei to BUSD
+        value_wei = int(tx['value'])
+        value_eth = value_wei / 10**18  # Convert value from wei to ETH
         timestamp = int(tx['timeStamp'])
         address_from = tx['from']
         address_to = tx['to']
-
+        print("value", value_eth)
+        print("timestamp", timestamp)
+        print("cutoff date", cutoff_date)
         if timestamp >= cutoff_date:
-            usd_value = convert_to_usd(value, timestamp)
-            print("USD value", usd_value)
+            usd_value = convert_to_usd(value_eth, timestamp)
             if usd_value is not None:
-                if value < 0:  # Outgoing transaction
-                    outgoing_volume_usd += usd_value
-                    print("Outgoing transaction from:", address_from)
-                elif value > 0:  # Incoming transaction
-                    incoming_volume_usd += usd_value
+                if address_to.lower() == target_address.lower():  # Incoming transaction
+                    incoming_volume_eth += value_eth
                     print("Incoming transaction to:", address_to)
+                elif address_from.lower() == target_address.lower():  # Outgoing transaction
+                    outgoing_volume_eth += value_eth
+                    print("Outgoing transaction from:", address_from)
 
-    return incoming_volume_usd, outgoing_volume_usd
+    return incoming_volume_eth, outgoing_volume_eth
 
-def convert_eth_to_usd(value_eth, timestamp):
-    # Fetch Ethereum to USD exchange rate from CoinCap API at the timestamp
-    url = "https://api.coincap.io/v2/rates/ethereum/history"
-    params = {
-        'interval': 'm1',
-        'start': timestamp,
-        'end': timestamp + 60  # Add 60 seconds for 1-minute interval
-    }
-    headers = {
-        'Accepts': 'application/json',
-        'Authorization': f"Bearer {COIN_API_KEY}"
-    }
+
+def convert_to_usd(value, timestamp):
+    api_url = f"https://min-api.cryptocompare.com/data/pricehistorical?fsym=ETH&tsyms=USD&ts={timestamp}&api_key=CRYPTO_COMPARE_API_KEY"
 
     try:
-        response = requests.get(url, params=params, headers=headers)
-        if response.status_code == 200:
-            data = response.json()
-            if 'data' in data and len(data['data']) > 0:
-                price_usd = data['data'][0]['rateUsd']
-                value_usd = value_eth * float(price_usd)
-                return value_usd
-            else:
-                print("No price data available for Ethereum at the given timestamp")
-                return None
-        else:
-            print(f"Error fetching Ethereum to USD exchange rate. Status code: {response.status_code}")
-            return None
-    except Exception as e:
-        print(f"Exception occurred while fetching Ethereum to USD exchange rate: {str(e)}")
+        response = requests.get(api_url)
+        data = response.json()
+        usd_price = data['ETH']['USD']
+        usd_value = value * usd_price
+        return usd_value
+    except requests.RequestException as e:
+        print("Error occurred while converting to USD:", str(e))
         return None
-
 erc20_one_transactions = fetch_erc20_transactions(erc20_address_one,ETHERSCAN_API_KEY)
 erc20_two_transactions = fetch_erc20_transactions(erc20_address_two,ETHERSCAN_API_KEY)
 erc20_three_transactions = fetch_erc20_transactions(erc20_address_three,ETHERSCAN_API_KEY)
 
 print("erc20 one")
-(a1,b1) = calculate_erc20_volumes(erc20_one_transactions)
+(a1,b1) = calculate_erc20_volumes(erc20_one_transactions,erc20_address_one)
 print("Incoming1",a1)
 print("Outgoing1",b1)
 print("erc20 two")
-(a2,b2) = calculate_erc20_volumes(erc20_two_transactions)
+(a2,b2) = calculate_erc20_volumes(erc20_two_transactions,erc20_address_two)
 print("Incoming1",a2)
 print("Outgoing1",b2)
 print("erc20 three")
-(a3,b3) = calculate_erc20_volumes(erc20_three_transactions)
+(a3,b3) = calculate_erc20_volumes(erc20_three_transactions,erc20_address_three)
 print("Incoming1",a3)
 print("Outgoing1",b3)
