@@ -42,64 +42,48 @@ def fetch_ethereum_transactions(address, api_key):
 
     return []
 
-def calculate_eth_volumes(transactions):
+
+def calculate_eth_volumes(transactions, target_address):
     incoming_volume_usd = 0
     outgoing_volume_usd = 0
 
     # Calculate the timestamp 60 days ago
     cutoff_date = int((datetime.now() - timedelta(days=60)).timestamp())
-    
+
     for tx in transactions:
         value = int(tx['value']) / 10**18  # Convert value from wei to BUSD
         timestamp = int(tx['timeStamp'])
         address_from = tx['from']
         address_to = tx['to']
-
+        print("value",value)
+        print("timestamp",timestamp)
+        print("cutoff date",cutoff_date)
         if timestamp >= cutoff_date:
             usd_value = convert_to_usd(value, timestamp)
-            print("USD value", usd_value)
             if usd_value is not None:
-                if value < 0:  # Outgoing transaction
-                    outgoing_volume_usd += usd_value
-                    print("Outgoing transaction from:", address_from)
-                elif value > 0:  # Incoming transaction
+                if address_to.lower() == target_address.lower():  # Incoming transaction
                     incoming_volume_usd += usd_value
                     print("Incoming transaction to:", address_to)
+                elif address_from.lower() == target_address.lower():  # Outgoing transaction
+                    outgoing_volume_usd += usd_value
+                    print("Outgoing transaction from:", address_from)
 
     return incoming_volume_usd, outgoing_volume_usd
 
-def convert_eth_to_usd(value_eth, timestamp):
-    # Fetch Ethereum to USD exchange rate from CoinCap API at the timestamp
-    url = "https://api.coincap.io/v2/rates/ethereum/history"
-    params = {
-        'interval': 'm1',
-        'start': timestamp,
-        'end': timestamp + 60  # Add 60 seconds for 1-minute interval
-    }
-    headers = {
-        'Accepts': 'application/json',
-        'Authorization': f"Bearer {COIN_API_KEY}"
-    }
+def convert_to_usd(value, timestamp):
+    api_url = f"https://min-api.cryptocompare.com/data/pricehistorical?fsym=ETH&tsyms=USD&ts={timestamp}&api_key=CRYPTO_COMPARE_API_KEY"
 
     try:
-        response = requests.get(url, params=params, headers=headers)
-        if response.status_code == 200:
-            data = response.json()
-            if 'data' in data and len(data['data']) > 0:
-                price_usd = data['data'][0]['rateUsd']
-                value_usd = value_eth * float(price_usd)
-                return value_usd
-            else:
-                print("No price data available for Ethereum at the given timestamp")
-                return None
-        else:
-            print(f"Error fetching Ethereum to USD exchange rate. Status code: {response.status_code}")
-            return None
-    except Exception as e:
-        print(f"Exception occurred while fetching Ethereum to USD exchange rate: {str(e)}")
+        response = requests.get(api_url)
+        data = response.json()
+        usd_price = data['ETH']['USD']
+        usd_value = value * usd_price
+        return usd_value
+    except requests.RequestException as e:
+        print("Error occurred while converting to USD:", str(e))
         return None
 
 ethereum_transactions =  fetch_ethereum_transactions(ethereum_address,ETHERSCAN_API_KEY)
-(a,b) = calculate_eth_volumes(ethereum_transactions)
+(a,b) = calculate_eth_volumes(ethereum_transactions,ethereum_address)
 print("Incoming",a)
 print("Outgoing",b)
