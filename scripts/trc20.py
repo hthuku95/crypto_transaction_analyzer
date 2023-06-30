@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 import requests
 from dotenv import dotenv_values
-
+import csv
 env_vars = dotenv_values('.env')
 from dotenv import dotenv_values
 
@@ -44,8 +44,8 @@ def fetch_trc20_transactions(address, api_key):
     return []
 
 def calculate_trc20_volumes(transactions):
-    incoming_volume_usd = 0
-    outgoing_volume_usd = 0
+    incoming_transactions = []
+    outgoing_transactions = []
 
     # Calculate the timestamp 60 days ago
     cutoff_date = int((datetime.now() - timedelta(days=60)).timestamp())
@@ -62,13 +62,23 @@ def calculate_trc20_volumes(transactions):
             usd_value = convert_trx_to_usd(value_trx, timestamp)
             if usd_value is not None:
                 if value_trx < 0:  # Outgoing transaction
-                    outgoing_volume_usd += usd_value
-                    print("Outgoing transaction from:", contract_data['owner_address'])
+                    outgoing_transactions.append({
+                        'asset_type': 'TRC20',
+                        'transaction_hash': tx['txID'],
+                        'timestamp': datetime.fromtimestamp(timestamp).strftime('%d/%m/%Y'),
+                        'value_trx': abs(value_trx),
+                        'value_usd': abs(usd_value)
+                    })
                 elif value_trx > 0:  # Incoming transaction
-                    incoming_volume_usd += usd_value
-                    print("Incoming transaction to:", contract_data['to_address'])
+                    incoming_transactions.append({
+                        'asset_type': 'TRC20',
+                        'transaction_hash': tx['txID'],
+                        'timestamp': datetime.fromtimestamp(timestamp).strftime('%d/%m/%Y'),
+                        'value_trx': value_trx,
+                        'value_usd': usd_value
+                    })
 
-    return incoming_volume_usd, outgoing_volume_usd
+    return incoming_transactions, outgoing_transactions
 
 def convert_trx_to_usd(value_trx, timestamp):
     # Check if conversion value is already cached
@@ -88,10 +98,20 @@ def convert_trx_to_usd(value_trx, timestamp):
         print("Error occurred while converting TRX to USD:", str(e))
         return None
 
+def export_transaction_data_to_csv(transactions, filename):
+    fieldnames = ['asset_type', 'transaction_hash', 'timestamp', 'value_trx', 'value_usd']
+
+    with open(filename, 'w', newline='') as file:
+        writer = csv.DictWriter(file, fieldnames=fieldnames)
+        writer.writeheader()
+
+        for transaction in transactions:
+            writer.writerow(transaction)
+
+    print(f"Transaction data exported to {filename}")
+
 trc20_transactions = fetch_trc20_transactions(trc20_address, TRONSCAN_API_KEY)
-print(trc20_transactions[-1])
-print(trc20_transactions[-2])
-print(trc20_transactions[-3])
-(a, b) = calculate_trc20_volumes(trc20_transactions)
-print("Incoming:", a)
-print("Outgoing:", b)
+incoming_transactions, outgoing_transactions = calculate_trc20_volumes(trc20_transactions)
+
+export_transaction_data_to_csv(incoming_transactions, 'incoming_trx_transactions.csv')
+export_transaction_data_to_csv(outgoing_transactions, 'outgoing_trx_transactions.csv')
