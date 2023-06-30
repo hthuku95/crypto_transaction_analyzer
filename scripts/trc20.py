@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 import requests
 from dotenv import dotenv_values
 import csv
+import matplotlib.pyplot as plt
 env_vars = dotenv_values('.env')
 from dotenv import dotenv_values
 
@@ -107,8 +108,25 @@ def export_transaction_data_to_csv(transactions, filename):
 
         for transaction in transactions:
             writer.writerow(transaction)
+    
+    generate_chart(transactions, filename)
 
     print(f"Transaction data exported to {filename}")
+
+def generate_chart(transactions, filename):
+    timestamps = [transaction['timestamp'] for transaction in transactions]
+    values_usd = [transaction['value_usd'] for transaction in transactions]
+
+    plt.figure(figsize=(12, 6))
+    plt.plot(timestamps, values_usd, marker='o', linestyle='-', label='TRC20')
+    plt.xlabel('Timestamp')
+    plt.ylabel('USD Value')
+    plt.title(f'TRC20 Transactions - {filename} - USD Value')
+    plt.legend()
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    plt.savefig(f'{filename.split(".")[0]}_usd_chart.png')
+    plt.close()
 
 trc20_transactions = fetch_trc20_transactions(trc20_address, TRONSCAN_API_KEY)
 incoming_transactions, outgoing_transactions = calculate_trc20_volumes(trc20_transactions)
