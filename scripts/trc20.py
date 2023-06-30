@@ -1,10 +1,15 @@
 from datetime import datetime, timedelta
 import requests
+from dotenv import dotenv_values
+
+env_vars = dotenv_values('.env')
+from dotenv import dotenv_values
+
+env_vars = dotenv_values('.env')
 
 trc20_address = "TR9octGKwGi8EaBhphP8d8D6dTkSyMJKXW"
-TRONSCAN_API_KEY = "60003d7a-10cd-4d0c-9abe-5a781c1971c2"
-COIN_API_KEY = "ec455fb4-aab6-44bf-88af-279555e4aaa9"
-CRYPTO_COMPARE_API_KEY = "42d127eac62b0177671afb0df449ed4cf7db75d5f9407af0e7d4724e86d1ee60"
+TRONSCAN_API_KEY = env_vars.get('TRONSCAN_API_KEY')
+CRYPTO_COMPARE_API_KEY = env_vars.get('CRYPTO_COMPARE_API_KEY')
 
 def fetch_trc20_transactions(address, api_key):
     # TronGrid API configuration

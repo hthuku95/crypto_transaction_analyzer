@@ -4,14 +4,16 @@ from datetime import datetime, timedelta
 import json
 from web3 import Web3
 import requests
+from dotenv import dotenv_values
 
-COIN_API_KEY = "ec455fb4-aab6-44bf-88af-279555e4aaa9"
-CRYPTO_COMPARE_API_KEY = "42d127eac62b0177671afb0df449ed4cf7db75d5f9407af0e7d4724e86d1ee60"
+env_vars = dotenv_values('.env')
+
+CRYPTO_COMPARE_API_KEY = env_vars.get('CRYPTO_COMPARE_API_KEY')
 
 erc20_address_one = "0xd9ba1Dbe38eB76307ec275F11CEd907033961bA1"
 erc20_address_two = "0x4F196FdEdC51C7F0c9E33D1D9030d8EC5C5A238C"
 erc20_address_three = "0x36928500bc1dcd7af6a2b4008875cc336b927d57"
-ETHERSCAN_API_KEY = "K9XBVRXWXPGQGRT8JXV3DU8E2UPMYIUVP7"
+ETHERSCAN_API_KEY = env_vars.get('ETHERSCAN_API_KEY')
 
 def fetch_erc20_transactions(address, api_key):
     # Ethereum configuration

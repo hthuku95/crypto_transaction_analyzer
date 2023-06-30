@@ -4,13 +4,15 @@ from datetime import datetime, timedelta
 import json
 from web3 import Web3
 import requests
+from dotenv import dotenv_values
 
-COIN_API_KEY = "ec455fb4-aab6-44bf-88af-279555e4aaa9"
-CRYPTO_COMPARE_API_KEY = "42d127eac62b0177671afb0df449ed4cf7db75d5f9407af0e7d4724e86d1ee60"
+env_vars = dotenv_values('.env')
+
+CRYPTO_COMPARE_API_KEY = env_vars.get('CRYPTO_COMPARE_API_KEY')
 
 # Ethereum address
 ethereum_address = "0xdB3c617cDd2fBf0bb4309C325F47678e37F096D9"
-ETHERSCAN_API_KEY = "K9XBVRXWXPGQGRT8JXV3DU8E2UPMYIUVP7"
+ETHERSCAN_API_KEY = env_vars.get('ETHERSCAN_API_KEY')
 
 def fetch_ethereum_transactions(address, api_key):
     # Ethereum configuration

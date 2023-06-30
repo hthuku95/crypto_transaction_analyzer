@@ -4,12 +4,15 @@ from datetime import datetime, timedelta
 import json
 from web3 import Web3
 import requests
+from dotenv import dotenv_values
 
-CRYPTO_COMPARE_API_KEY = "42d127eac62b0177671afb0df449ed4cf7db75d5f9407af0e7d4724e86d1ee60"
+env_vars = dotenv_values('.env')
+
+CRYPTO_COMPARE_API_KEY = env_vars.get('CRYPTO_COMPARE_API_KEY')
 
 btc_address_one = "Bc1qzh8rga4vvvzzdan5jqhz5ljygt0hvdp7j74qzn1GrwDkr33gT6"
 btc_address_two = "1GrwDkr33gT6LuumniYjKEGjTLhsL5kmqC"
-BITCOIN_EXPLORER_API_KEY = "748db9f9008749a89ddfcc1a230ea420"
+BITCOIN_EXPLORER_API_KEY = env_vars.get('BITCOIN_EXPLORER_API_KEY')
 
 def fetch_bitcoin_transactions(address, api_key):
     # Blockcypher API configuration

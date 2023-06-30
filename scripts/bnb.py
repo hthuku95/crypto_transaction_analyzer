@@ -4,11 +4,15 @@ from datetime import datetime, timedelta
 import json
 from web3 import Web3
 import requests
+from dotenv import dotenv_values
 
-CRYPTO_COMPARE_API_KEY = "42d127eac62b0177671afb0df449ed4cf7db75d5f9407af0e7d4724e86d1ee60"
+env_vars = dotenv_values('.env')
+
+
+CRYPTO_COMPARE_API_KEY = env_vars.get('CRYPTO_COMPARE_API_KEY')
 
 bnb_address = "0x3F10a43438cdF6B0E9Ef39dcA5F9438dd3326227"
-BSCSCAN_API_KEY = "Y5VBBSWUKS4VIZ6S1HCKVCW27XK7VU8X9J"
+BSCSCAN_API_KEY = env_vars.get('BSCSAN_API_KEY')
 
 def fetch_bnb_transactions(address, api_key):
     # BscScan API configuration
