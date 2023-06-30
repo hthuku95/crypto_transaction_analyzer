@@ -5,6 +5,7 @@ import json
 from web3 import Web3
 import requests
 from dotenv import dotenv_values
+import csv
 
 env_vars = dotenv_values('.env')
 
@@ -55,8 +56,8 @@ def fetch_erc20_transactions(address, api_key):
     return []
 
 def calculate_erc20_volumes(transactions, target_address):
-    incoming_volume_eth = 0
-    outgoing_volume_eth = 0
+    incoming_transactions = []
+    outgoing_transactions = []
 
     # Calculate the timestamp 60 days ago
     cutoff_date = int((datetime.now() - timedelta(days=60)).timestamp())
@@ -67,20 +68,28 @@ def calculate_erc20_volumes(transactions, target_address):
         timestamp = int(tx['timeStamp'])
         address_from = tx['from']
         address_to = tx['to']
-        print("value", value_eth)
-        print("timestamp", timestamp)
-        print("cutoff date", cutoff_date)
+
         if timestamp >= cutoff_date:
             usd_value = convert_to_usd(value_eth, timestamp)
             if usd_value is not None:
                 if address_to.lower() == target_address.lower():  # Incoming transaction
-                    incoming_volume_eth += value_eth
-                    print("Incoming transaction to:", address_to)
+                    incoming_transactions.append({
+                        'asset_type': 'ERC20',
+                        'transaction_hash': tx['hash'],
+                        'timestamp': datetime.fromtimestamp(timestamp).strftime('%d/%m/%Y'),
+                        'value_eth': value_eth,
+                        'value_usd': usd_value
+                    })
                 elif address_from.lower() == target_address.lower():  # Outgoing transaction
-                    outgoing_volume_eth += value_eth
-                    print("Outgoing transaction from:", address_from)
+                    outgoing_transactions.append({
+                        'asset_type': 'ERC20',
+                        'transaction_hash': tx['hash'],
+                        'timestamp': datetime.fromtimestamp(timestamp).strftime('%d/%m/%Y'),
+                        'value_eth': value_eth,
+                        'value_usd': usd_value
+                    })
 
-    return incoming_volume_eth, outgoing_volume_eth
+    return incoming_transactions, outgoing_transactions
 
 
 def convert_to_usd(value, timestamp):
@@ -100,19 +109,31 @@ def convert_to_usd(value, timestamp):
     except requests.RequestException as e:
         print("Error occurred while converting to USD:", str(e))
         return None
-erc20_one_transactions = fetch_erc20_transactions(erc20_address_one,ETHERSCAN_API_KEY)
-erc20_two_transactions = fetch_erc20_transactions(erc20_address_two,ETHERSCAN_API_KEY)
-erc20_three_transactions = fetch_erc20_transactions(erc20_address_three,ETHERSCAN_API_KEY)
 
-print("erc20 one")
-(a1,b1) = calculate_erc20_volumes(erc20_one_transactions,erc20_address_one)
-print("Incoming1",a1)
-print("Outgoing1",b1)
-print("erc20 two")
-(a2,b2) = calculate_erc20_volumes(erc20_two_transactions,erc20_address_two)
-print("Incoming1",a2)
-print("Outgoing1",b2)
-print("erc20 three")
-(a3,b3) = calculate_erc20_volumes(erc20_three_transactions,erc20_address_three)
-print("Incoming1",a3)
-print("Outgoing1",b3)
+
+def export_transaction_data_to_csv(transactions, filename):
+    fieldnames = ['asset_type', 'transaction_hash', 'timestamp', 'value_eth', 'value_usd']
+
+    with open(filename, 'w', newline='') as file:
+        writer = csv.DictWriter(file, fieldnames=fieldnames)
+        writer.writeheader()
+
+        for transaction in transactions:
+            writer.writerow(transaction)
+
+    print(f"Transaction data exported to {filename}")
+
+erc20_one_transactions = fetch_erc20_transactions(erc20_address_one, ETHERSCAN_API_KEY)
+erc20_two_transactions = fetch_erc20_transactions(erc20_address_two, ETHERSCAN_API_KEY)
+erc20_three_transactions = fetch_erc20_transactions(erc20_address_three, ETHERSCAN_API_KEY)
+
+incoming1, outgoing1 = calculate_erc20_volumes(erc20_one_transactions, erc20_address_one)
+incoming2, outgoing2 = calculate_erc20_volumes(erc20_two_transactions, erc20_address_two)
+incoming3, outgoing3 = calculate_erc20_volumes(erc20_three_transactions, erc20_address_three)
+
+export_transaction_data_to_csv(incoming1, 'erc20_one_incoming.csv')
+export_transaction_data_to_csv(outgoing1, 'erc20_one_outgoing.csv')
+export_transaction_data_to_csv(incoming2, 'erc20_two_incoming.csv')
+export_transaction_data_to_csv(outgoing2, 'erc20_two_outgoing.csv')
+export_transaction_data_to_csv(incoming3, 'erc20_three_incoming.csv')
+export_transaction_data_to_csv(outgoing3, 'erc20_three_outgoing.csv')
