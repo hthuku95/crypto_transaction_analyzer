@@ -6,6 +6,7 @@ from web3 import Web3
 import requests
 from dotenv import dotenv_values
 import csv
+import matplotlib.pyplot as plt
 
 env_vars = dotenv_values('.env')
 
@@ -120,8 +121,24 @@ def export_transaction_data_to_csv(transactions, filename):
 
         for transaction in transactions:
             writer.writerow(transaction)
+    generate_chart(transactions, filename)
 
     print(f"Transaction data exported to {filename}")
+
+def generate_chart(transactions, filename):
+    timestamps = [transaction['timestamp'] for transaction in transactions]
+    values_usd = [transaction['value_usd'] for transaction in transactions]
+
+    plt.figure(figsize=(12, 6))
+    plt.plot(timestamps, values_usd, marker='o', linestyle='-', label='USD Value')
+    plt.xlabel('Timestamp')
+    plt.ylabel('USD Value')
+    plt.title(f'ERC20 Transactions - {filename} - USD Value')
+    plt.legend()
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    plt.savefig(f'{filename.split(".")[0]}_usd_chart.png')
+    plt.close()
 
 erc20_one_transactions = fetch_erc20_transactions(erc20_address_one, ETHERSCAN_API_KEY)
 erc20_two_transactions = fetch_erc20_transactions(erc20_address_two, ETHERSCAN_API_KEY)
