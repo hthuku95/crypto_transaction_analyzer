@@ -6,6 +6,7 @@ from web3 import Web3
 import requests
 from dotenv import dotenv_values
 import csv
+import matplotlib.pyplot as plt
 
 
 env_vars = dotenv_values('.env')
@@ -105,8 +106,8 @@ def calculate_bitcoin_volumes(transactions):
 
     return incoming_transactions, outgoing_transactions
 
-def export_transaction_data_to_csv(incoming_transactions, outgoing_transactions):
-    filename = 'bitcoin_transactions.csv'
+def export_transaction_data_to_csv(incoming_transactions, outgoing_transactions,address):
+    filename = f'bitcoin_transactions-{address}.csv'
 
     fieldnames = ['asset_type', 'transaction_hash', 'timestamp', 'value_usd']
 
@@ -120,8 +121,48 @@ def export_transaction_data_to_csv(incoming_transactions, outgoing_transactions)
         for transaction in outgoing_transactions:
             writer.writerow(transaction)
 
+         # Generate charts
+        generate_charts(incoming_transactions, outgoing_transactions,address)
+
     print(f"Transaction data exported to {filename}")
 
+# Generating Charts
+
+def generate_charts(incoming_transactions, outgoing_transactions,address):
+    # Extract timestamps and corresponding USD values
+    incoming_timestamps = [transaction['timestamp'] for transaction in incoming_transactions]
+    incoming_values = [transaction['value_usd'] for transaction in incoming_transactions]
+
+    outgoing_timestamps = [transaction['timestamp'] for transaction in outgoing_transactions]
+    outgoing_values = [transaction['value_usd'] for transaction in outgoing_transactions]
+
+    # Generate incoming transactions chart
+    plt.figure(figsize=(12, 6))
+    plt.plot(incoming_timestamps, incoming_values, marker='o', linestyle='-', label='Incoming Transactions')
+    plt.xlabel('Timestamp')
+    plt.ylabel('USD Value')
+    plt.title('Bitcoin Incoming Transactions')
+    plt.legend()
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    plt.savefig(f'incoming_transactions_chart_{address}.png')
+    plt.close()
+
+    # Generate outgoing transactions chart
+    plt.figure(figsize=(12, 6))
+    plt.plot(outgoing_timestamps, outgoing_values, marker='o', linestyle='-', label='Outgoing Transactions')
+    plt.xlabel('Timestamp')
+    plt.ylabel('USD Value')
+    plt.title('Bitcoin Outgoing Transactions')
+    plt.legend()
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    plt.savefig('outgoing_transactions_chart.png')
+    plt.close()
+
+    print("Charts generated.")
+
+# Converting to USD
 def convert_to_usd(amount, timestamp):
     # Check if conversion value is already cached
     if timestamp in usd_cache:
@@ -154,5 +195,6 @@ bitcoin_one_transactions = fetch_bitcoin_transactions(btc_address_one, BITCOIN_E
 bitcoin_two_transactions = fetch_bitcoin_transactions(btc_address_two, BITCOIN_EXPLORER_API_KEY)
 incoming_transactions, outgoing_transactions = calculate_bitcoin_volumes(bitcoin_one_transactions)
 incoming_transactions2, outgoing_transactions2 = calculate_bitcoin_volumes(bitcoin_two_transactions)
-export_transaction_data_to_csv(incoming_transactions + incoming_transactions2, outgoing_transactions + outgoing_transactions2)
+export_transaction_data_to_csv(incoming_transactions, outgoing_transactions,btc_address_one)
+export_transaction_data_to_csv(incoming_transactions2, outgoing_transactions2,btc_address_two)
 
