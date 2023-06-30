@@ -5,7 +5,7 @@ import json
 from web3 import Web3
 import requests
 from dotenv import dotenv_values
-
+import csv
 env_vars = dotenv_values('.env')
 
 
@@ -53,33 +53,60 @@ def fetch_bnb_transactions(address, api_key):
 
     return []
 
+def export_transaction_data_to_csv(incoming_transactions, outgoing_transactions):
+    fieldnames = ['asset_type', 'transaction_hash', 'timestamp', 'value_usd']
+    
+    with open('bnb_transactions.csv', 'w', newline='') as csvfile:
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        writer.writeheader()
+        
+        for transaction in incoming_transactions:
+            writer.writerow({
+                'asset_type': 'BNB',
+                'transaction_hash': transaction['transaction_hash'],
+                'timestamp': transaction['timestamp'],
+                'value_usd': transaction['value_usd']
+            })
+        
+        for transaction in outgoing_transactions:
+            writer.writerow({
+                'asset_type': 'BNB',
+                'transaction_hash': transaction['transaction_hash'],
+                'timestamp': transaction['timestamp'],
+                'value_usd': transaction['value_usd']
+            })
+
 def calculate_bnb_volumes(transactions, target_address):
-    incoming_volume_usd = 0
-    outgoing_volume_usd = 0
+    incoming_transactions = []
+    outgoing_transactions = []
 
     # Calculate the timestamp 60 days ago
     cutoff_date = int((datetime.now() - timedelta(days=60)).timestamp())
 
     for tx in transactions:
-        value = int(tx['value']) / 10**18  # Convert value from wei to BUSD
+        value = int(tx['value']) / 10**18  # Convert value from wei to BNB
         timestamp = int(tx['timeStamp'])
         address_from = tx['from']
         address_to = tx['to']
-        print("value",value)
-        print("timestamp",timestamp)
-        print("cutoff date",cutoff_date)
+        
         if timestamp >= cutoff_date:
             usd_value = convert_to_usd(value, timestamp)
+            
             if usd_value is not None:
+                transaction_data = {
+                    'transaction_hash': tx['hash'],
+                    'timestamp': timestamp,
+                    'value_usd': usd_value
+                }
+                
                 if address_to.lower() == target_address.lower():  # Incoming transaction
-                    incoming_volume_usd += usd_value
+                    incoming_transactions.append(transaction_data)
                     print("Incoming transaction to:", address_to)
                 elif address_from.lower() == target_address.lower():  # Outgoing transaction
-                    outgoing_volume_usd += usd_value
+                    outgoing_transactions.append(transaction_data)
                     print("Outgoing transaction from:", address_from)
 
-    return incoming_volume_usd, outgoing_volume_usd
-
+    return incoming_transactions, outgoing_transactions
 
 
 def convert_to_usd(value, timestamp):
@@ -100,9 +127,12 @@ def convert_to_usd(value, timestamp):
         print("Error occurred while converting to USD:", str(e))
         return None
 
-
-bnb_transactions = fetch_bnb_transactions(bnb_address,BSCSCAN_API_KEY)
+bnb_transactions = fetch_bnb_transactions(bnb_address, BSCSCAN_API_KEY)
 print(bnb_transactions)
-(a,b) = calculate_bnb_volumes(bnb_transactions,bnb_address)
-print("Incoming",a)
-print("Outgoing",b)
+
+incoming, outgoing = calculate_bnb_volumes(bnb_transactions, bnb_address)
+print("Incoming:", incoming)
+print("Outgoing:", outgoing)
+
+export_transaction_data_to_csv(incoming, outgoing)
+print("Transaction data exported to CSV file.")
