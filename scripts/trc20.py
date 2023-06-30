@@ -11,7 +11,16 @@ trc20_address = "TR9octGKwGi8EaBhphP8d8D6dTkSyMJKXW"
 TRONSCAN_API_KEY = env_vars.get('TRONSCAN_API_KEY')
 CRYPTO_COMPARE_API_KEY = env_vars.get('CRYPTO_COMPARE_API_KEY')
 
+# Cache for storing fetched transactions
+transaction_cache = {}
+
+# Cache for storing USD conversion values
+usd_cache = {}
+
 def fetch_trc20_transactions(address, api_key):
+    # Check if transactions are already cached
+    if address in transaction_cache:
+        return transaction_cache[address]
     # TronGrid API configuration
     trongrid_api_url = 'https://api.trongrid.io/v1/accounts/{address}/transactions'
     headers = {
@@ -24,6 +33,8 @@ def fetch_trc20_transactions(address, api_key):
         if response.status_code == 200:
             data = response.json()
             transactions = data.get('data', [])
+            # Cache the fetched transactions
+            transaction_cache[address] = transactions
             return transactions
         else:
             print(f"Error fetching TRC20 transactions for address {address}. Status code: {response.status_code}")
@@ -60,6 +71,9 @@ def calculate_trc20_volumes(transactions):
     return incoming_volume_usd, outgoing_volume_usd
 
 def convert_trx_to_usd(value_trx, timestamp):
+    # Check if conversion value is already cached
+    if timestamp in usd_cache:
+        return usd_cache[timestamp]
     api_url = f"https://min-api.cryptocompare.com/data/pricehistorical?fsym=TRX&tsyms=USD&ts={timestamp}&api_key={CRYPTO_COMPARE_API_KEY}"
 
     try:
@@ -67,6 +81,8 @@ def convert_trx_to_usd(value_trx, timestamp):
         data = response.json()
         usd_price = data['TRX']['USD']
         usd_value = value_trx * usd_price
+        # Cache the USD conversion value
+        usd_cache[timestamp] = usd_value
         return usd_value
     except requests.RequestException as e:
         print("Error occurred while converting TRX to USD:", str(e))
