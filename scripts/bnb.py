@@ -42,8 +42,7 @@ def fetch_bnb_transactions(address, api_key):
 
     return []
 
-
-def calculate_bnb_volumes(transactions):
+def calculate_bnb_volumes(transactions, target_address):
     incoming_volume_usd = 0
     outgoing_volume_usd = 0
 
@@ -52,25 +51,25 @@ def calculate_bnb_volumes(transactions):
 
     for tx in transactions:
         value = int(tx['value']) / 10**18  # Convert value from wei to BUSD
-        
         timestamp = int(tx['timeStamp'])
         address_from = tx['from']
         address_to = tx['to']
-
+        print("value",value)
+        print("timestamp",timestamp)
+        print("cutoff date",cutoff_date)
         if timestamp >= cutoff_date:
             usd_value = convert_to_usd(value, timestamp)
-            print("USD value", usd_value)
             if usd_value is not None:
-                if value < 0:  # Outgoing transaction
-                    outgoing_volume_usd += usd_value
-                    print("Outgoing transaction from:", address_from)
-                elif value > 0:  # Incoming transaction
+                if address_to.lower() == target_address.lower():  # Incoming transaction
                     incoming_volume_usd += usd_value
                     print("Incoming transaction to:", address_to)
+                elif address_from.lower() == target_address.lower():  # Outgoing transaction
+                    outgoing_volume_usd += usd_value
+                    print("Outgoing transaction from:", address_from)
 
     return incoming_volume_usd, outgoing_volume_usd
 
-import requests
+
 
 def convert_to_usd(value, timestamp):
     api_url = f"https://min-api.cryptocompare.com/data/pricehistorical?fsym=BNB&tsyms=USD&ts={timestamp}&api_key=CRYPTO_COMPARE_API_KEY"
@@ -87,7 +86,7 @@ def convert_to_usd(value, timestamp):
 
 
 bnb_transactions = fetch_bnb_transactions(bnb_address,BSCSCAN_API_KEY)
-
-(a,b) = calculate_bnb_volumes(bnb_transactions)
+print(bnb_transactions)
+(a,b) = calculate_bnb_volumes(bnb_transactions,bnb_address)
 print("Incoming",a)
 print("Outgoing",b)
