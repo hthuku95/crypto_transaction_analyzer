@@ -6,6 +6,7 @@ from web3 import Web3
 import requests
 from dotenv import dotenv_values
 import csv
+import matplotlib.pyplot as plt
 
 env_vars = dotenv_values('.env')
 
@@ -121,7 +122,28 @@ def export_transaction_data_to_csv(incoming_transactions, outgoing_transactions)
         for transaction in outgoing_transactions:
             writer.writerow(transaction)
 
+    generate_chart(incoming_transactions, outgoing_transactions, filename)
+
     print(f"Transaction data exported to {filename}")
+
+def generate_chart(incoming_transactions, outgoing_transactions, filename):
+    incoming_timestamps = [transaction['timestamp'] for transaction in incoming_transactions]
+    incoming_values_usd = [transaction['value_usd'] for transaction in incoming_transactions]
+
+    outgoing_timestamps = [transaction['timestamp'] for transaction in outgoing_transactions]
+    outgoing_values_usd = [transaction['value_usd'] for transaction in outgoing_transactions]
+
+    plt.figure(figsize=(12, 6))
+    plt.plot(incoming_timestamps, incoming_values_usd, marker='o', linestyle='-', label='Incoming')
+    plt.plot(outgoing_timestamps, outgoing_values_usd, marker='o', linestyle='-', label='Outgoing')
+    plt.xlabel('Timestamp')
+    plt.ylabel('USD Value')
+    plt.title(f'Ethereum Transactions - {filename} - USD Value')
+    plt.legend()
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    plt.savefig(f'{filename.split(".")[0]}_usd_chart.png')
+    plt.close()
 
 ethereum_transactions = fetch_ethereum_transactions(ethereum_address, ETHERSCAN_API_KEY)
 incoming_transactions, outgoing_transactions = calculate_eth_volumes(ethereum_transactions, ethereum_address)
